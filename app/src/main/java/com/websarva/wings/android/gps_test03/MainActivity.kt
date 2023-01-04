@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             // それでも拒否された場合
             val toast = Toast.makeText(
                 this,
-                "これ以上なにもできません", Toast.LENGTH_SHORT
+                "これ以上なにもできません。", Toast.LENGTH_SHORT
             )
             toast.show()
         }
