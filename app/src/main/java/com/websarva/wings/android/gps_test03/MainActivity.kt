@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             var sta_lat = _ido;
             var sta_ltg = _keido;
             //目的地　★御成門小学校前バス停（仮）
-            //最終的に店情報の緯度と経度を設定する。仮で出発地から引いた値を設定。
+            //最終的に店情報の緯度と経度を設定する。仮で出発地から引いた値を設定。　
             var end_lat = _ido - 0.0019312;
             var end_ltg = _keido - 0.0036184;
             intent.setAction(Intent.ACTION_VIEW)
