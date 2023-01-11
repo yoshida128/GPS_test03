@@ -9,21 +9,45 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
 import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
+import androidx.annotation.UiThread
+import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.HandlerCompat
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.lang.StringBuilder
+import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.URL
 import java.util.*
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), LocationListener {
+    var shopName01 = ""
+    var shopAddr01 = ""
+    var shopido01 = ""
+    var shopkeido01 = ""
+    var shopName02 = ""
+    var shopAddr02 = ""
+    var shopido02 = ""
+    var shopkeido02 = ""
+    var shopName03 = ""
+    var shopAddr03 = ""
+    var shopido03 = ""
+    var shopkeido03 = ""
     private var _ido = 0.0     //緯度
     private var _keido = 0.0   //経度
-    private var _zoom = 17     //ズーム（最大：20まで）
     private var _GPS_flg = 0   //GPS起動済フラグ
 
     private lateinit var locationManager: LocationManager
@@ -41,6 +65,129 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 "これ以上なにもできません", Toast.LENGTH_SHORT
             )
             toast.show()
+        }
+    }
+    // 店情報の取得処理を行うメソッド
+    private fun receiveShopInfo(urlFull: String){
+        val handler = HandlerCompat.createAsync(mainLooper)
+        val backgroundReceiver = ShopInfoBackgroundReceiver(handler,urlFull)
+        val executeService = Executors.newSingleThreadExecutor()
+        executeService.submit(backgroundReceiver)
+    }
+    // 非同期で店情報取得APIにアクセスする為のクラス
+    private inner class ShopInfoBackgroundReceiver(handler: Handler, url: String): Runnable{
+        // ハンドラオブジェクト
+        private val _handler = handler
+        // 店情報を取得するURL
+        private val _url = url
+        @WorkerThread
+        override fun run() {
+            // 店情報取得サービスから取得したJSON文字列。店情報を格納。
+            var result = ""
+            // URIオブジェクトを生成
+            val url = URL(_url)
+            // URLオブジェクトからHttpURLConnectionオブジェクトを取得
+            val con = url.openConnection() as? HttpURLConnection
+            // con がnullでない場合
+            con?.let {
+                try {
+                    it.connectTimeout = 1000
+                    it.readTimeout = 1000
+                    it.requestMethod = "GET"
+                    it.connect()
+                    val stream = it.inputStream
+                    result = is2String(stream)
+                    stream.close()
+                }
+                catch(ex: SocketTimeoutException){
+                }
+                it.disconnect()
+            }
+            // ここに店情報取得APIにアクセスするコードを記述
+            val postExecutor = ShopInfoPostExecutor(result)
+            _handler.post(postExecutor)
+        }
+
+        private fun is2String(stream: InputStream): String {
+            val sb = StringBuilder()
+            val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
+            var line = reader.readLine()
+            while(line != null) {
+                sb.append(line)
+                line = reader.readLine()
+            }
+            reader.close()
+            return sb.toString()
+        }
+    }
+    // 非同期で店情報を取得した後にUIスレッドでその情報を表示するためのクラス
+    private inner class ShopInfoPostExecutor(result: String): Runnable {
+        private val _result = result
+        @UiThread
+        override fun run() {
+            // ホットペツパー情報の取得と表示
+            val rootJSON = JSONObject(_result)
+            val resultsJSON = rootJSON.getJSONObject("results")
+            //1件目の店名取得
+            val shopJSONArray = resultsJSON.getJSONArray("shop")
+            val shopJSON01 = shopJSONArray.getJSONObject(0)
+            shopName01 = shopJSON01.getString("name")
+            val textView0101: TextView = findViewById(R.id.tvShopName01)
+            textView0101.text = shopName01
+            //1件目の住所取得
+            shopAddr01 = shopJSON01.getString("address")
+            val textView0102: TextView = findViewById(R.id.tvShopAddr01)
+            textView0102.text = shopAddr01
+            //1件目の緯度取得
+            shopido01 = shopJSON01.getString("lat")
+            val textView0103: TextView = findViewById(R.id.tvShopIdo01)
+            textView0103.text = shopido01
+            //1件目の経度取得
+            shopkeido01 = shopJSON01.getString("lng")
+            val textView0104: TextView = findViewById(R.id.tvShopKeido01)
+            textView0104.text = shopkeido01
+
+            //2件目の店名取得
+            val shopJSON02 = shopJSONArray.getJSONObject(1)
+            shopName02 = shopJSON02.getString("name")
+            val textView0201: TextView = findViewById(R.id.tvShopName02)
+            textView0201.text = shopName02
+            //2件目の住所取得
+            shopAddr02 = shopJSON02.getString("address")
+            val textView0202: TextView = findViewById(R.id.tvShopAddr02)
+            textView0202.text = shopAddr02
+            //2件目の緯度経度取得
+            shopido02 = shopJSON02.getString("lat")
+            shopkeido02 = shopJSON02.getString("lng")
+            //2件目の緯度取得
+            shopido02 = shopJSON02.getString("lat")
+            val textView0203: TextView = findViewById(R.id.tvShopIdo02)
+            textView0203.text = shopido02
+            //2件目の経度取得
+            shopkeido02 = shopJSON02.getString("lng")
+            val textView0204: TextView = findViewById(R.id.tvShopKeido02)
+            textView0204.text = shopkeido02
+
+            //3件目の店名取得
+            val shopJSON03 = shopJSONArray.getJSONObject(2)
+            shopName03 = shopJSON03.getString("name")
+            val textView0301: TextView = findViewById(R.id.tvShopName03)
+            textView0301.text = shopName03
+            //3件目の住所取得
+            shopAddr03 = shopJSON03.getString("address")
+            val textView0302: TextView = findViewById(R.id.tvShopAddr03)
+            textView0302.text = shopAddr03
+            //3件目の緯度経度取得
+            shopido03 = shopJSON03.getString("lat")
+            shopkeido03 = shopJSON03.getString("lng")
+            //3件目の緯度取得
+            shopido03 = shopJSON03.getString("lat")
+            val textView0303: TextView = findViewById(R.id.tvShopIdo03)
+            textView0303.text = shopido03
+            //3件目の経度取得
+            shopkeido03 = shopJSON03.getString("lng")
+            val textView0304: TextView = findViewById(R.id.tvShopKeido03)
+            textView0304.text = shopkeido03
         }
     }
 
@@ -96,22 +243,18 @@ class MainActivity : AppCompatActivity(), LocationListener {
             _keido = location.longitude
             _GPS_flg = 1
 
-            //出発地　★東京タワー　（仮）
-            var sta_lat = _ido;
-            var sta_ltg = _keido;
-            //目的地　★御成門小学校前バス停　（仮）
-            //最終的に店情報の緯度と経度を設定する。仮で出発地から引いた値を設定。
-            var end_lat = _ido - 0.0019312;
-            var end_ltg = _keido - 0.0036184;
-            intent.setAction(Intent.ACTION_VIEW)
-            intent.setClassName("com.google.android.apps.maps",
-                "com.google.android.maps.MapsActivity");
-            var str = String.format(
+            // 現在の緯度と経度を取得
+            val lat = _ido
+            val ltg = _keido
+
+            // ホットペツパーAPIを起動する為のURL　検索対象は固定値3件
+            // rangeは3：1000m以内　、orderは4：おすすめ順
+            val urlFull = String.format(
                 Locale.US,
-                "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
-                sta_lat,sta_ltg,end_lat,end_ltg);
-            intent.setData(Uri.parse(str))
-            startActivity(intent)
+                "https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=b2dd6f39b13b34bd&lat=%s&lng=%s&range=3&order=4&count=3&format=json",
+                lat, ltg
+            )
+            receiveShopInfo(urlFull)
         }
     }
 
@@ -119,5 +262,61 @@ class MainActivity : AppCompatActivity(), LocationListener {
     }
 
     override fun onProviderDisabled(provider: String) {
+    }
+
+    //１件目店舗までのルート検索ボタンタップ時の処理
+    fun onRouteSearchButtonClick01(view: View) {
+        //出発地（現在地）
+        var sta_lat01 = _ido;
+        var sta_ltg01 = _keido;
+        //目的地
+        var end_lat01 = shopido01;
+        var end_ltg01 = shopkeido01;
+        intent.setAction(Intent.ACTION_VIEW)
+        intent.setClassName("com.google.android.apps.maps",
+            "com.google.android.maps.MapsActivity");
+        var str01 = String.format(
+            Locale.US,
+            "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
+            sta_lat01,sta_ltg01,end_lat01,end_ltg01);
+        intent.setData(Uri.parse(str01))
+        startActivity(intent)
+    }
+    //２件目店舗までのルート検索ボタンタップ時の処理
+    fun onRouteSearchButtonClick02(view: View) {
+        //出発地（現在地）
+        var sta_lat02 = _ido;
+        var sta_ltg02 = _keido;
+        //目的地
+        var end_lat02 = shopido02;
+        var end_ltg02 = shopkeido02;
+        intent.setAction(Intent.ACTION_VIEW)
+        intent.setClassName("com.google.android.apps.maps",
+            "com.google.android.maps.MapsActivity");
+        var str02 = String.format(
+            Locale.US,
+            "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
+            sta_lat02,sta_ltg02,end_lat02,end_ltg02);
+        intent.setData(Uri.parse(str02))
+        startActivity(intent)
+    }
+
+    //３件目店舗までのルート検索ボタンタップ時の処理
+    fun onRouteSearchButtonClick03(view: View) {
+        //出発地（現在地）
+        var sta_lat03 = _ido;
+        var sta_ltg03 = _keido;
+        //目的地
+        var end_lat03 = shopido03;
+        var end_ltg03 = shopkeido03;
+        intent.setAction(Intent.ACTION_VIEW)
+        intent.setClassName("com.google.android.apps.maps",
+            "com.google.android.maps.MapsActivity");
+        var str03 = String.format(
+            Locale.US,
+            "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
+            sta_lat03,sta_ltg03,end_lat03,end_ltg03);
+        intent.setData(Uri.parse(str03))
+        startActivity(intent)
     }
 }

@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">ＧＰＳテスト０３</string>
+    <string name="app_name">めし探＿試行版００１</string>
+    <string name="tv_area00">品川駅港南口</string>
+    <string name="tv_name001">検索中</string>
+    <string name="tv_addr001">検索中</string>
+    <string name="tv_name002">検索中</string>
+    <string name="tv_addr002">検索中</string>
+    <string name="tv_name003">検索中</string>
+    <string name="tv_addr003">検索中</string>
 </resources>
