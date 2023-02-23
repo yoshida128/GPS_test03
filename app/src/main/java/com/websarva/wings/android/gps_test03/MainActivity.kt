@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
+import android.text.util.Linkify
 import android.util.Log
 import android.view.View
 import android.widget.TextView
@@ -22,6 +23,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.HandlerCompat
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.AdRequest
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
@@ -38,17 +42,21 @@ class MainActivity : AppCompatActivity(), LocationListener {
     var shopAddr01 = ""
     var shopido01 = ""
     var shopkeido01 = ""
+    var shopurls01 = ""
     var shopName02 = ""
     var shopAddr02 = ""
     var shopido02 = ""
     var shopkeido02 = ""
+    var shopurls02 = ""
     var shopName03 = ""
     var shopAddr03 = ""
     var shopido03 = ""
     var shopkeido03 = ""
+    var shopurls03 = ""
     private var _ido = 0.0     //緯度
     private var _keido = 0.0   //経度
     private var _GPS_flg = 0   //GPS起動済フラグ
+    private var _KensakuSumi_flg = 0   //検索済フラグ
 
     private lateinit var locationManager: LocationManager
     private val requestPermissionLauncher = registerForActivityResult(
@@ -146,6 +154,12 @@ class MainActivity : AppCompatActivity(), LocationListener {
             shopkeido01 = shopJSON01.getString("lng")
             val textView0104: TextView = findViewById(R.id.tvShopKeido01)
             textView0104.text = shopkeido01
+            //1件目のURL取得
+            val urlsJSON01 = shopJSON01.getJSONObject("urls")
+            shopurls01 = urlsJSON01.getString("pc")
+            val textView0105: TextView = findViewById(R.id.tvShopUrl01)
+            textView0105.setAutoLinkMask(Linkify.WEB_URLS);
+            textView0105.text = shopurls01 + "#detailInfo"
 
             //2件目の店名取得
             val shopJSON02 = shopJSONArray.getJSONObject(1)
@@ -167,6 +181,12 @@ class MainActivity : AppCompatActivity(), LocationListener {
             shopkeido02 = shopJSON02.getString("lng")
             val textView0204: TextView = findViewById(R.id.tvShopKeido02)
             textView0204.text = shopkeido02
+            //2件目のURL取得
+            val urlsJSON02 = shopJSON02.getJSONObject("urls")
+            shopurls02 = urlsJSON02.getString("pc")
+            val textView0205: TextView = findViewById(R.id.tvShopUrl02)
+            textView0205.setAutoLinkMask(Linkify.WEB_URLS)
+            textView0205.text = shopurls02 + "#detailInfo"
 
             //3件目の店名取得
             val shopJSON03 = shopJSONArray.getJSONObject(2)
@@ -188,12 +208,28 @@ class MainActivity : AppCompatActivity(), LocationListener {
             shopkeido03 = shopJSON03.getString("lng")
             val textView0304: TextView = findViewById(R.id.tvShopKeido03)
             textView0304.text = shopkeido03
+            //3件目のURL取得
+            val urlsJSON03 = shopJSON03.getJSONObject("urls")
+            shopurls03 = urlsJSON03.getString("pc")
+            val textView0305: TextView = findViewById(R.id.tvShopUrl03)
+            textView0305.setAutoLinkMask(Linkify.WEB_URLS)
+            textView0305.text = shopurls03 + "#detailInfo"
+            //検索済フラグをオンにする
+            _KensakuSumi_flg = 1
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        lateinit var mAdView : AdView
+        MobileAds.initialize(this) {}
+
+        mAdView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        mAdView.loadAd(adRequest)
+
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -266,44 +302,55 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     //１件目店舗までのルート検索ボタンタップ時の処理
     fun onRouteSearchButtonClick01(view: View) {
-        //出発地（現在地）
-        var sta_lat01 = _ido;
-        var sta_ltg01 = _keido;
-        //目的地
-        var end_lat01 = shopido01;
-        var end_ltg01 = shopkeido01;
-        intent.setAction(Intent.ACTION_VIEW)
-        intent.setClassName("com.google.android.apps.maps",
-            "com.google.android.maps.MapsActivity");
-        var str01 = String.format(
-            Locale.US,
-            "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
-            sta_lat01,sta_ltg01,end_lat01,end_ltg01);
-        intent.setData(Uri.parse(str01))
-        startActivity(intent)
-    }
-    //２件目店舗までのルート検索ボタンタップ時の処理
-    fun onRouteSearchButtonClick02(view: View) {
-        //出発地（現在地）
-        var sta_lat02 = _ido;
-        var sta_ltg02 = _keido;
-        //目的地
-        var end_lat02 = shopido02;
-        var end_ltg02 = shopkeido02;
-        intent.setAction(Intent.ACTION_VIEW)
-        intent.setClassName("com.google.android.apps.maps",
-            "com.google.android.maps.MapsActivity");
-        var str02 = String.format(
-            Locale.US,
-            "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
-            sta_lat02,sta_ltg02,end_lat02,end_ltg02);
-        intent.setData(Uri.parse(str02))
-        startActivity(intent)
+        if (_KensakuSumi_flg.equals(1)) {
+            //出発地（現在地）
+            var sta_lat01 = _ido;
+            var sta_ltg01 = _keido;
+            //目的地
+            var end_lat01 = shopido01;
+            var end_ltg01 = shopkeido01;
+            intent.setAction(Intent.ACTION_VIEW)
+            intent.setClassName(
+                "com.google.android.apps.maps",
+                "com.google.android.maps.MapsActivity"
+            );
+            var str01 = String.format(
+                Locale.US,
+                "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
+                sta_lat01, sta_ltg01, end_lat01, end_ltg01
+            );
+            intent.setData(Uri.parse(str01))
+            startActivity(intent)
+        }
     }
 
+    //２件目店舗までのルート検索ボタンタップ時の処理
+    fun onRouteSearchButtonClick02(view: View) {
+        if (_KensakuSumi_flg.equals(1)) {
+            //出発地（現在地）
+            var sta_lat02 = _ido;
+            var sta_ltg02 = _keido;
+            //目的地
+            var end_lat02 = shopido02;
+            var end_ltg02 = shopkeido02;
+            intent.setAction(Intent.ACTION_VIEW)
+            intent.setClassName(
+                "com.google.android.apps.maps",
+                "com.google.android.maps.MapsActivity"
+            );
+            var str02 = String.format(
+                Locale.US,
+                "http://maps.google.com/maps?saddr=%s,%s&daddr=%s,%s",
+                sta_lat02, sta_ltg02, end_lat02, end_ltg02
+            );
+            intent.setData(Uri.parse(str02))
+            startActivity(intent)
+        }
+    }
     //３件目店舗までのルート検索ボタンタップ時の処理
     fun onRouteSearchButtonClick03(view: View) {
-        //出発地（現在地）
+        if (_KensakuSumi_flg.equals(1)) {
+            //出発地（現在地）
         var sta_lat03 = _ido;
         var sta_ltg03 = _keido;
         //目的地
@@ -318,5 +365,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
             sta_lat03,sta_ltg03,end_lat03,end_ltg03);
         intent.setData(Uri.parse(str03))
         startActivity(intent)
+        }
     }
 }

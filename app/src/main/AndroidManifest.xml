@@ -19,6 +19,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GPS_test03"
         tools:targetApi="31">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~6300978111"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -27,6 +32,11 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+
         </activity>
     </application>
 
