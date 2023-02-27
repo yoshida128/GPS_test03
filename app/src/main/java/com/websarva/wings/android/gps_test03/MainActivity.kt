@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
     var shopido03 = ""
     var shopkeido03 = ""
     var shopurls03 = ""
+
     private var _ido = 0.0     //緯度
     private var _keido = 0.0   //経度
     private var _GPS_flg = 0   //GPS起動済フラグ
